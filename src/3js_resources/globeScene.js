@@ -20,7 +20,7 @@ function init() {
     var container;
 
     container = document.createElement('div');
-    document.body.appendChild(container);
+    document.getElementById('earth').appendChild(container);
 
     camera = new THREE.PerspectiveCamera( 75, SCREEN_WIDTH / SCREEN_HEIGHT, 0.1, 10000 );
     camera.position.z = 1000;
