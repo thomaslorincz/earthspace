@@ -2,21 +2,29 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-	<script src="./3js_resources/threeLibs/three.js"></script>
-	<script src="./3js_resources/threeLibs/renderers/CanvasRenderer.js"></script>
-	<script src="./3js_resources/threeLibs/controls/OrbitControls.js"></script>
+	<script src="/src/3js_resources/threeLibs/three.js"></script>
+	<script src="/src/3js_resources/threeLibs/renderers/CanvasRenderer.js"></script>
+	<script src="/src/3js_resources/threeLibs/controls/OrbitControls.js"></script>
   <title>earthspace</title>
-  <link href="https://fonts.googleapis.com/css?family=Comfortaa:300|Montserrat:200" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Comfortaa:300|Montserrat:200,400" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <link href="/src/style.css" rel="stylesheet" type="text/css">
 </head>
 <body>
 <div id="toolbar">earthspace</div>
 <div id="content">
-  <div id="panel"></div>
+  <div id="panel">
+    <div id="minControl">
+      <i id="minIcon" class="material-icons">chevron_left</i>
+    </div>
+    <div id="dataContainer"></div>
+  </div>
+  <div id="minimizedPanel">
+    <i id="maxIcon" class="material-icons">chevron_right</i>
+  </div>
   <div id="earth"></div>
 </div>
-	<script id="vertexShader" src="./3js_resources/vertexShader.js" type="x-shader/x-vertex"></script>
-	<script id="fragmentShader" src="./3js_resources/fragmentShader.js" type="x-shader/x-fragment"></script>
-	<script src="./3js_resources/globeScene.js" type="text/javascript"></script>
+<script id="vertexShader" src="/src/3js_resources/vertexShader.js" type="x-shader/x-vertex"></script>
+<script id="fragmentShader" src="/src/3js_resources/fragmentShader.js" type="x-shader/x-fragment"></script>
 </body>
 </html>
