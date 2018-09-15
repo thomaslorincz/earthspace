@@ -28,7 +28,7 @@ body {
   display: block;
   position: relative;
   width: 100%;
-  height: 100%;
+  height: calc(100% - 34px);
 }
 
 #content > #panel {
@@ -42,10 +42,77 @@ body {
   z-index: 1;
 }
 
+#content > #panel.hidden {
+  display: none;
+}
+
+#content > #panel > #minControl {
+  display: block;
+  position: relative;
+  width: 100%;
+  height: 40px;
+  text-align: right;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+#content > #panel > #minControl > #minIcon {
+  cursor: pointer;
+}
+
+#content > #panel > #dataContainer {
+  display: block;
+  position: relative;
+  width: 100%;
+  height: calc(100% - 40px);
+  background-color: gainsboro;
+  overflow: auto;
+  box-sizing: border-box;
+  padding-left: 8px;
+  padding-top: 8px;
+}
+
+#content > #panel > #dataContainer > table tr td {
+  color: #2B2B2B;
+  font-family: "Montserrat", sans-serif;
+  font-size: 14px;
+  font-weight: 200;
+  border-bottom: 1px solid grey;
+}
+
+#content > #panel > #dataContainer > table tr td.header {
+  font-size: 16px;
+  font-weight: 400;
+}
+
+#content > #minimizedPanel {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 34px;
+  height: 100%;
+  background-color: gainsboro;
+  padding-left: 8px;
+  padding-top: 8px;
+}
+
+#content > #minimizedPanel.shown {
+  display: inline-block;
+}
+
+#content > #minimizedPanel > #maxIcon {
+  cursor: pointer;
+}
+
 #content > #earth {
   display: inline-block;
   position: relative;
   width: 80%;
   height: 100%;
   float: right;
+}
+
+#content > #earth.fullscreen {
+  width: calc(100% - 34px);
 }
