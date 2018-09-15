@@ -1,3 +1,5 @@
+import * as d3 from 'd3';
+
 // adapted from memoize.js by @philogb and @addyosmani
 export function memoize(fn) {
   return function () {
@@ -35,3 +37,17 @@ export function debounce(func, wait, immediate) {
     }
   };
 }
+
+export var getTween = function (prop, to, time) {
+  time = time || 500;
+  var node = this;
+  var curr = node[prop];
+  var interpol = d3.interpolateObject(curr, to);
+  return function (t) {
+    if (t >= time) {
+      return true;
+    }
+    node[prop].copy(interpol(t / time));
+    //console.log(t, time);
+  };
+};
