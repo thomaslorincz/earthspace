@@ -120,7 +120,6 @@ wss.on('connection', (ws) => {
   });
 });
 
-
 function pollSatelliteCoordinates(){
     
 }
