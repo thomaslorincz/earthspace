@@ -20,11 +20,11 @@ app.use(session({
     secure : true
 }));
 
-var serviceAccount = require("./private/globeweaver-e257f-firebase-adminsdk-2473q-9373994e8d.json");
+var serviceAccount = require("./private/earth-space-firebase-adminsdk-vvjb3-6435dcdc65.json");
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  databaseURL: "https://globeweaver-e257f.firebaseio.com"
+  databaseURL: "https://earth-space.firebaseio.com"
 });
 
 //0Middleware------------------------------------------------------------------>
@@ -44,3 +44,19 @@ var http = require("http");
 app.listen(process.env.PORT, process.env.IP, function(){
     console.log("Server Started!");
 });
+
+function pollSatelliteCoordinates(){
+    
+}
+
+function pollPlaneCoordinates(){
+    
+}
+
+function pollBusCoordinates(){
+    
+}
+
+function getFBLiveVideos(){
+    
+}
