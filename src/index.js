@@ -112,10 +112,13 @@ document.getElementById('panel').ondrop = (e) => {
           const rows = csvData.split('\n');
           for (let j = 0; j < rows.length; j++) {
             const row = rows[j].split(',');
-            const tableRow = document.createElement('tr')
+            const tableRow = document.createElement('tr');
             table.appendChild(tableRow);
             for (let k = 0; k < row.length; k++) {
               const tableCell = document.createElement('td');
+              if (j === 0) {
+                tableCell.classList.add('header');
+              }
               tableCell.innerText = row[k];
               tableRow.appendChild(tableCell);
             }
