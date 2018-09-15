@@ -1,0 +1,30 @@
+{
+  "name": "earthspace",
+  "version": "1.0.0",
+  "description": "___        ______     ____ _                 _  ___           / \\ \\      / / ___|   / ___| | ___  _   _  __| |/ _ \\         / _ \\ \\ /\\ / /\\___ \\  | |   | |/ _ \\| | | |/ _` | (_) |       / ___ \\ V  V /  ___) | | |___| | (_) | |_| | (_| |\\__, |      /_/   \\_\\_/\\_/  |____/   \\____|_|\\___/ \\__,_|\\__,_|  /_/   -----------------------------------------------------------------",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thomaslorincz/earthspace.git"
+  },
+  "author": "Louis Moc",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/thomaslorincz/earthspace/issues"
+  },
+  "homepage": "https://github.com/thomaslorincz/earthspace#readme",
+  "dependencies": {
+    "body-parser": "^1.18.3",
+    "child_process": "^1.0.2",
+    "ejs": "^2.6.1",
+    "express": "^4.16.3",
+    "express-session": "^1.15.6",
+    "ffmpeg": "0.0.4",
+    "firebase-admin": "^6.0.0",
+    "passport": "^0.4.0",
+    "ws": "^2.3.1"
+  }
+}
