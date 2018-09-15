@@ -32,38 +32,37 @@ export default class globeScene {
 
     // setup controls and rerender when controlling to avoid frame lag
     this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+    this.controls.autoRotate = true;
+    this.controls.enableKeys = false;
     this.controls.addEventListener('change', () => this.render());
 
     //EARTH
     const earthGeo = new THREE.SphereGeometry (455, 400, 400);
     const earthMat = new THREE.MeshBasicMaterial();
     earthMat.map = new THREE.TextureLoader().load('/src/3js_resources/textures/earth_lightsBW.jpg');
-    const chloroplethGeo = new THREE.SphereGeometry(456, 400, 400);
+    const choroplethGeo = new THREE.SphereGeometry(456, 400, 400);
     this.earthMesh = new THREE.Mesh(earthGeo, earthMat);
     this.earthMesh.position.set(0, 0, 0);
     this.scene.add(this.earthMesh);
-    const chloroplethMat = new THREE.MeshBasicMaterial();
-    chloroplethMat.map = new THREE.TextureLoader().load('/src/3js_resources/textures/earth_lightsBW.jpg');
-    chloroplethMat.opacity = 0;
-    this.choroplethEarth = new THREE.Mesh( earthGeo, chloroplethMat);
+    const choroplethMat = new THREE.MeshBasicMaterial();
+    choroplethMat.map = new THREE.TextureLoader().load('/src/3js_resources/textures/earth_lightsBW.jpg');
+    choroplethMat.opacity = 0;
+    this.choroplethEarth = new THREE.Mesh(earthGeo, choroplethMat);
     this.choroplethEarth.scale.set(1.01,1.01,1.01);
     this.choroplethEarth.position.set(0, 0, 0);
     this.choroplethEarth.rotation.set(-0.04,-0.24000000000000002,0);
-    //choroplethEarth.rotation.set(0,-0.9,-0.2);
     this.scene.add(this.choroplethEarth);
 
     this.scene.background = new THREE.TextureLoader().load('/src/3js_resources/textures/milk_backg.jpg');
     this.choroplethMapping();
 
-    // change to a key event listener or look up a better way to do this
-    document.addEventListener('keydown', () => this.onGetKeyDown());
     window.addEventListener('resize', () => this.onWindowResize(), false);
   }
 
   choroplethMapping() {
     const d3 = Plotly.d3;
     const img_jpg= d3.select('#jpg-export');
-    d3.csv('https://raw.githubusercontent.com/plotly/datasets/master/2014_world_gdp_with_codes.csv', function(err, rows){
+    d3.csv('https://raw.githubusercontent.com/plotly/datasets/master/2014_world_gdp_with_codes.csv', (err, rows) => {
       function unpack(rows, key) {
         return rows.map(function(row) { return row[key]; });
       }
@@ -98,7 +97,7 @@ export default class globeScene {
           }
         }
       };
-      Plotly.plot(document.createElement('mydiv'), data, layout, {showLink: false}).then((gd) => {
+      Plotly.plot(document.createElement('div'), data, layout, {showLink: false}).then((gd) => {
         Plotly.toImage(gd,{height:2048,width:4096}).then((url) => {
             img_jpg.attr("src", url);
             return Plotly.toImage(gd,{format:'jpeg',height:2048,width:4096});
@@ -135,43 +134,6 @@ export default class globeScene {
     const z = ((radius) * Math.sin(phi)*Math.sin(theta));
 
     return [x,y,z];
-  }
-
-  onGetKeyDown ( event ) {
-    var inputkeyCode = event.keyCode;
-    // check and use keycode events
-    if (inputkeyCode === 74) {
-      // right arrow key
-      this.choroplethEarth.rotation.y += 0.04;
-    } else if (inputkeyCode === 71) {
-      // left arrow key
-      this.choroplethEarth.rotation.y -= 0.04;
-    } else if (inputkeyCode === 89) {
-      // up arrow key
-      this.choroplethEarth.rotation.x += 0.04;
-    } else if (inputkeyCode === 72) {
-      // down arrow key
-      this.choroplethEarth.rotation.x -= 0.04;
-    } else if (inputkeyCode === 73) {
-      // i key
-      this.choroplethEarth.scale.x += 0.04;
-      this.choroplethEarth.scale.y += 0.04;
-      this.choroplethEarth.scale.z += 0.04;
-    } else if (inputkeyCode === 75) {
-      // k key
-      this.choroplethEarth.scale.x -= 0.04;
-      this.choroplethEarth.scale.y -= 0.04;
-      this.choroplethEarth.scale.z -= 0.04;
-    } else if (inputkeyCode === 112) {
-      this.choroplethEarth.material.map.repeat.x  += 0.04;
-    } else if (inputkeyCode === 111) {
-      this.choroplethEarth.material.map.repeat.x  -= 0.04;
-    }  else if (inputkeyCode === 114) {
-      this.choroplethEarth.material.map.repeat.y  += 0.04;
-    } else if (inputkeyCode === 102) {
-      this.choroplethEarth.material.map.repeat.y  -= 0.04;
-    }
-    console.log(this.choroplethEarth);
   }
 
   // responsively resize 3js canvas to window size
