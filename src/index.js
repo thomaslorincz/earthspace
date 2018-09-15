@@ -106,7 +106,7 @@ document.getElementById('panel').ondrop = (e) => {
         reader.onload = (e) => {
           const table = document.createElement('table');
           table.setAttribute('id', 'table');
-          document.getElementById('panel').appendChild(table);
+          document.getElementById('dataContainer').appendChild(table);
           let csvData = e.target.result;
           csvData = csvData.replace(/"/g, '');
           const rows = csvData.split('\n');
@@ -140,4 +140,18 @@ document.getElementById('panel').ondrop = (e) => {
     // Use DataTransfer interface to remove the drag data
     e.dataTransfer.clearData();
   }
+};
+
+document.getElementById('minIcon').onclick = (e) => {
+  e.preventDefault();
+  document.getElementById('earth').classList.add('fullscreen');
+  document.getElementById('panel').classList.add('hidden');
+  document.getElementById('minimizedPanel').classList.add('shown');
+};
+
+document.getElementById('maxIcon').onclick = (e) => {
+  e.preventDefault();
+  document.getElementById('earth').classList.remove('fullscreen');
+  document.getElementById('panel').classList.remove('hidden');
+  document.getElementById('minimizedPanel').classList.remove('shown');
 };
