@@ -60,9 +60,8 @@ export default class globeScene {
   }
 
   choroplethMapping() {
-    const d3 = Plotly.d3;
-    const img_jpg= d3.select('#jpg-export');
-    d3.csv('https://raw.githubusercontent.com/plotly/datasets/master/2014_world_gdp_with_codes.csv', (err, rows) => {
+    const img_jpg = Plotly.d3.select('#jpg-export');
+    Plotly.d3.csv('https://raw.githubusercontent.com/plotly/datasets/master/2014_world_gdp_with_codes.csv', (err, rows) => {
       function unpack(rows, key) {
         return rows.map(function(row) { return row[key]; });
       }
@@ -70,18 +69,17 @@ export default class globeScene {
       const data = [{
         type: 'choropleth',
         locations: unpack(rows, 'CODE'),
-        z: unpack(rows, 'Value'),
+        z: unpack(rows, 'GDP (BILLIONS)'),
         text: unpack(rows, 'COUNTRY'),
         colorscale: [
           [0,'rgb(5, 10, 172)'],[0.35,'rgb(40, 60, 190)'],
           [0.5,'rgb(70, 100, 245)'], [0.6,'rgb(90, 120, 245)'],
           [0.7,'rgb(106, 137, 247)'],[1,'rgb(220, 220, 220)']],
-        autocolorscale: false,
-        reversescale: true,
+        autocolorscale: true,
         showscale: false,
         marker: {
           line: {
-            color: 'rgb(180,180,180)',
+            color: 'rgb(43,43,43)',
             width: 0.5
           }
         }
@@ -92,7 +90,6 @@ export default class globeScene {
           showframe: false,
           showcoastlines: true,
           projection:{
-            //type: 'Equirectangular'
             type: 'Natural earth'
           }
         }
@@ -100,6 +97,7 @@ export default class globeScene {
       Plotly.plot(document.createElement('div'), data, layout, {showLink: false}).then((gd) => {
         Plotly.toImage(gd,{height:2048,width:4096}).then((url) => {
             img_jpg.attr("src", url);
+            console.log('img_jpg', img_jpg);
             return Plotly.toImage(gd,{format:'jpeg',height:2048,width:4096});
           }
         ).then((img) => {
@@ -110,7 +108,7 @@ export default class globeScene {
           tex.repeat.y = 0.8596228109564436;
           // 1.08740234375;
           this.choroplethEarth.material.map = tex;
-          this.choroplethEarth.material.opacity = 0.3;
+          this.choroplethEarth.material.opacity = 1;
           this.choroplethEarth.material.transparent = true;
           console.log(this.choroplethEarth);
         })
