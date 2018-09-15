@@ -1,5 +1,5 @@
 import { setEvents } from '../common/setEvent';
-import { getEventCenter, geodecoder } from '../common/geoHelpers';
+import {getEventCenter, geodecoder, getPoint} from '../common/geoHelpers';
 import { mapTexture } from '../common/mapTexture';
 import { memoize } from '../common/utils';
 import { feature as topojsonFeature } from 'topojson';
@@ -25,7 +25,7 @@ export default class globeScene {
     const container = document.createElement('div');
     document.getElementById('earth').appendChild(container);
 
-    this.camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 10000 );
+    this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
     this.camera.position.z = 1000;
     this.cameraController = new THREE.Object3D();
     this.cameraController.add(this.camera);
@@ -45,28 +45,19 @@ export default class globeScene {
     this.controls.addEventListener('change', () => this.render());
 
     // EARTH
-    let earthGeo = new THREE.SphereGeometry (455, 400, 400);
-    let earthMat = new THREE.MeshBasicMaterial();
-    earthMat.map = new THREE.TextureLoader().load('/src/3js_resources/textures/earth_lightsBW.jpg');
+    // let earthGeo = new THREE.SphereGeometry (455, 400, 400);
+    // let earthMat = new THREE.MeshBasicMaterial();
+    // earthMat.map = new THREE.TextureLoader().load('/src/3js_resources/textures/earth_lightsBW.jpg');
 
-    this.earthMesh = new THREE.Mesh(earthGeo, earthMat);
-    this.earthMesh.position.set(0, 0, 0);
-    this.scene.add(this.earthMesh);
-
-    // let choroplethMat = new THREE.MeshBasicMaterial();
-    // choroplethMat.map = new THREE.TextureLoader().load('/src/3js_resources/textures/earth_lightsBW.jpg');
-    // choroplethMat.opacity = 0;
-    // this.choroplethEarth = new THREE.Mesh(earthGeo, choroplethMat);
-    // this.choroplethEarth.scale.set(1.01,1.01,1.01);
-    // this.choroplethEarth.position.set(0, 0, 0);
-    // this.choroplethEarth.rotation.set(-0.04,-0.24000000000000002,0);
-    // this.scene.add(this.choroplethEarth);
+    // this.earthMesh = new THREE.Mesh(earthGeo, earthMat);
+    // this.earthMesh.position.set(0, 0, 0);
+    // this.scene.add(this.earthMesh);
 
     this.scene.background = new THREE.TextureLoader().load('/src/3js_resources/textures/milk_backg.jpg');
 
     window.addEventListener('resize', () => this.onWindowResize(), false);
 
-    d3.json('/data/world.json', (err, data) => {
+    d3.json('../../data/world.json').then((data) => {
       const segments = 155; // number of vertices. Higher = better mouse accuracy
 
       // Setup cache for country textures
@@ -78,21 +69,21 @@ export default class globeScene {
         return mapTexture(country, color);
       });
 
-      // Base globe with blue "water"
-      let oceanMaterial = new THREE.MeshPhongMaterial({color: '#2B2B2B', transparent: true});
-      let sphere = new THREE.SphereGeometry(200, segments, segments);
+      let oceanMaterial = new THREE.MeshBasicMaterial({color: '#FABFAB', transparent: true});
+      let sphere = new THREE.SphereGeometry(455, segments, segments);
       let baseGlobe = new THREE.Mesh(sphere, oceanMaterial);
-      baseGlobe.rotation.y = Math.PI;
-      baseGlobe.addEventListener('mousemove', (e) => this.onGlobeMousemove(e));
+      // baseGlobe.rotation.y = Math.PI;
+      baseGlobe.addEventListener('mousemove', (e) => this.onGlobeMousemove(e, baseGlobe));
 
       // add base map layer with all countries
       let worldTexture = mapTexture(countries, '#647089');
-      let mapMaterial  = new THREE.MeshPhongMaterial({map: worldTexture, transparent: true});
-      let baseMap = new THREE.Mesh(new THREE.SphereGeometry(200, segments, segments), mapMaterial);
-      baseMap.rotation.y = Math.PI;
+      let mapMaterial  = new THREE.MeshBasicMaterial({map: worldTexture, transparent: true});
+      let baseMap = new THREE.Mesh(new THREE.SphereGeometry(456, segments, segments), mapMaterial);
+      // baseMap.addEventListener('mousemove', (e) => this.onGlobeMousemove(e));
 
-      setEvents(camera, [baseGlobe], 'click');
-      setEvents(camera, [baseGlobe], 'mousemove', 10);
+      this.scene.add(baseGlobe);
+      this.scene.add(baseMap);
+      setEvents(this.camera, [baseGlobe], 'mousemove', 10);
     });
   }
 
@@ -114,12 +105,13 @@ export default class globeScene {
     return [x,y,z];
   }
 
-  onGlobeMousemove(event) {
+  onGlobeMousemove(event, baseGlobe) {
     let map;
     let material;
 
     // Get pointc, convert to latitude/longitude
-    const latlng = getEventCenter.call(this, event);
+    const latlng = this.getEventCenter(baseGlobe, event, 456);
+    console.log('LATLNG', latlng);
 
     // Look for country at that latitude/longitude
     const country = this.geo.search(latlng[0], latlng[1]);
@@ -130,19 +122,45 @@ export default class globeScene {
       this.currentCountry = country.code;
 
       // Update the html
-      // d3.select("#msg").html(country.code);
+      d3.select('#toolbar').node().innerText = country.code;
 
       // Overlay the selected country
       map = this.textureCache(country.code, '#3B3B3B');
       material = new THREE.MeshPhongMaterial({map: map, transparent: true});
       if (!this.overlay) {
-        this.overlay = new THREE.Mesh(new THREE.SphereGeometry(201, 40, 40), material);
-        this.overlay.rotation.y = Math.PI;
+        this.overlay = new THREE.Mesh(new THREE.SphereGeometry(457, 40, 40), material);
         this.scene.add(this.overlay);
       } else {
         this.overlay.material = material;
       }
     }
+  }
+
+  getEventCenter(globe, event, radius) {
+    radius = radius || 200;
+
+    var point = this.getPoint(globe, event);
+
+    var latRads = Math.acos(point.y / radius);
+    var lngRads = Math.atan2(point.z, point.x);
+    var lat = (Math.PI / 2 - latRads) * (180 / Math.PI);
+    var lng = (Math.PI - lngRads) * (180 / Math.PI);
+
+    return [lat, lng - 180];
+  }
+
+  getPoint(globe, event) {
+    // Get the vertices
+    // console.log(this, event);
+    let a = globe.geometry.vertices[event.face.a];
+    let b = globe.geometry.vertices[event.face.b];
+    let c = globe.geometry.vertices[event.face.c];
+
+    return {
+      x: (a.x + b.x + c.x) / 3,
+      y: (a.y + b.y + c.y) / 3,
+      z: (a.z + b.z + c.z) / 3
+    };
   }
 
   // responsively resize 3js canvas to window size
