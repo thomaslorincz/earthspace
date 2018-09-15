@@ -1,8 +1,12 @@
+import { setEvents } from '../common/setEvent';
+import { getEventCenter, geodecoder } from '../common/geoHelpers';
+import { mapTexture } from '../common/mapTexture';
+import { memoize } from '../common/utils';
+import { feature as topojsonFeature } from 'topojson';
+import * as d3 from 'd3';
+
 export default class globeScene {
   constructor() {
-    this.mouseX = 0;
-    this.mouseY = 0;
-    this.earthRadius = 455;
     this.camera = null;
     this.cameraController = null;
     this.scene = null;
@@ -11,6 +15,10 @@ export default class globeScene {
     this.earthMesh = null;
     this.choroplethEarth = null;
     this.countryMap = null;
+    this.currentCountry = null;
+    this.overlay = null;
+    this.textureCache = null;
+    this.geo = null;
   }
 
   init() {
@@ -36,83 +44,55 @@ export default class globeScene {
     this.controls.enableKeys = false;
     this.controls.addEventListener('change', () => this.render());
 
-    //EARTH
-    const earthGeo = new THREE.SphereGeometry (455, 400, 400);
-    const earthMat = new THREE.MeshBasicMaterial();
+    // EARTH
+    let earthGeo = new THREE.SphereGeometry (455, 400, 400);
+    let earthMat = new THREE.MeshBasicMaterial();
     earthMat.map = new THREE.TextureLoader().load('/src/3js_resources/textures/earth_lightsBW.jpg');
-    const choroplethGeo = new THREE.SphereGeometry(456, 400, 400);
+
     this.earthMesh = new THREE.Mesh(earthGeo, earthMat);
     this.earthMesh.position.set(0, 0, 0);
     this.scene.add(this.earthMesh);
-    const choroplethMat = new THREE.MeshBasicMaterial();
-    choroplethMat.map = new THREE.TextureLoader().load('/src/3js_resources/textures/earth_lightsBW.jpg');
-    choroplethMat.opacity = 0;
-    this.choroplethEarth = new THREE.Mesh(earthGeo, choroplethMat);
-    this.choroplethEarth.scale.set(1.01,1.01,1.01);
-    this.choroplethEarth.position.set(0, 0, 0);
-    this.choroplethEarth.rotation.set(-0.04,-0.24000000000000002,0);
-    this.scene.add(this.choroplethEarth);
+
+    // let choroplethMat = new THREE.MeshBasicMaterial();
+    // choroplethMat.map = new THREE.TextureLoader().load('/src/3js_resources/textures/earth_lightsBW.jpg');
+    // choroplethMat.opacity = 0;
+    // this.choroplethEarth = new THREE.Mesh(earthGeo, choroplethMat);
+    // this.choroplethEarth.scale.set(1.01,1.01,1.01);
+    // this.choroplethEarth.position.set(0, 0, 0);
+    // this.choroplethEarth.rotation.set(-0.04,-0.24000000000000002,0);
+    // this.scene.add(this.choroplethEarth);
 
     this.scene.background = new THREE.TextureLoader().load('/src/3js_resources/textures/milk_backg.jpg');
-    this.choroplethMapping();
 
     window.addEventListener('resize', () => this.onWindowResize(), false);
-  }
 
-  choroplethMapping() {
-    const img_jpg = Plotly.d3.select('#jpg-export');
-    Plotly.d3.csv('https://raw.githubusercontent.com/plotly/datasets/master/2014_world_gdp_with_codes.csv', (err, rows) => {
-      function unpack(rows, key) {
-        return rows.map(function(row) { return row[key]; });
-      }
+    d3.json('/data/world.json', (err, data) => {
+      const segments = 155; // number of vertices. Higher = better mouse accuracy
 
-      const data = [{
-        type: 'choropleth',
-        locations: unpack(rows, 'CODE'),
-        z: unpack(rows, 'GDP (BILLIONS)'),
-        text: unpack(rows, 'COUNTRY'),
-        colorscale: [
-          [0,'rgb(5, 10, 172)'],[0.35,'rgb(40, 60, 190)'],
-          [0.5,'rgb(70, 100, 245)'], [0.6,'rgb(90, 120, 245)'],
-          [0.7,'rgb(106, 137, 247)'],[1,'rgb(220, 220, 220)']],
-        autocolorscale: true,
-        showscale: false,
-        marker: {
-          line: {
-            color: 'rgb(43,43,43)',
-            width: 0.5
-          }
-        }
-      }];
+      // Setup cache for country textures
+      const countries = topojsonFeature(data, data.objects.countries);
 
-      const layout = {
-        geo: {
-          showframe: false,
-          showcoastlines: true,
-          projection:{
-            type: 'Natural earth'
-          }
-        }
-      };
-      Plotly.plot(document.createElement('div'), data, layout, {showLink: false}).then((gd) => {
-        Plotly.toImage(gd,{height:2048,width:4096}).then((url) => {
-            img_jpg.attr("src", url);
-            console.log('img_jpg', img_jpg);
-            return Plotly.toImage(gd,{format:'jpeg',height:2048,width:4096});
-          }
-        ).then((img) => {
-          const tex = new THREE.TextureLoader().load(img);
-          tex.repeat.x = 0.9351027703306524;
-          tex.offset.y = 0.08;
-          // 1.0927734375;
-          tex.repeat.y = 0.8596228109564436;
-          // 1.08740234375;
-          this.choroplethEarth.material.map = tex;
-          this.choroplethEarth.material.opacity = 1;
-          this.choroplethEarth.material.transparent = true;
-          console.log(this.choroplethEarth);
-        })
+      this.geo = geodecoder(countries.features);
+      this.textureCache = memoize((id, color) => {
+        const country = this.geo.find(id);
+        return mapTexture(country, color);
       });
+
+      // Base globe with blue "water"
+      let oceanMaterial = new THREE.MeshPhongMaterial({color: '#2B2B2B', transparent: true});
+      let sphere = new THREE.SphereGeometry(200, segments, segments);
+      let baseGlobe = new THREE.Mesh(sphere, oceanMaterial);
+      baseGlobe.rotation.y = Math.PI;
+      baseGlobe.addEventListener('mousemove', (e) => this.onGlobeMousemove(e));
+
+      // add base map layer with all countries
+      let worldTexture = mapTexture(countries, '#647089');
+      let mapMaterial  = new THREE.MeshPhongMaterial({map: worldTexture, transparent: true});
+      let baseMap = new THREE.Mesh(new THREE.SphereGeometry(200, segments, segments), mapMaterial);
+      baseMap.rotation.y = Math.PI;
+
+      setEvents(camera, [baseGlobe], 'click');
+      setEvents(camera, [baseGlobe], 'mousemove', 10);
     });
   }
 
@@ -132,6 +112,37 @@ export default class globeScene {
     const z = ((radius) * Math.sin(phi)*Math.sin(theta));
 
     return [x,y,z];
+  }
+
+  onGlobeMousemove(event) {
+    let map;
+    let material;
+
+    // Get pointc, convert to latitude/longitude
+    const latlng = getEventCenter.call(this, event);
+
+    // Look for country at that latitude/longitude
+    const country = this.geo.search(latlng[0], latlng[1]);
+
+    if (country !== null && country.code !== this.currentCountry) {
+
+      // Track the current country displayed
+      this.currentCountry = country.code;
+
+      // Update the html
+      // d3.select("#msg").html(country.code);
+
+      // Overlay the selected country
+      map = this.textureCache(country.code, '#3B3B3B');
+      material = new THREE.MeshPhongMaterial({map: map, transparent: true});
+      if (!this.overlay) {
+        this.overlay = new THREE.Mesh(new THREE.SphereGeometry(201, 40, 40), material);
+        this.overlay.rotation.y = Math.PI;
+        this.scene.add(this.overlay);
+      } else {
+        this.overlay.material = material;
+      }
+    }
   }
 
   // responsively resize 3js canvas to window size
