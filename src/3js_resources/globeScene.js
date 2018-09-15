@@ -72,13 +72,14 @@ export default class globeScene {
       let oceanMaterial = new THREE.MeshBasicMaterial({color: '#FABFAB', transparent: true});
       let sphere = new THREE.SphereGeometry(455, segments, segments);
       let baseGlobe = new THREE.Mesh(sphere, oceanMaterial);
-      // baseGlobe.rotation.y = Math.PI;
+      baseGlobe.rotation.y = Math.PI;
       baseGlobe.addEventListener('mousemove', (e) => this.onGlobeMousemove(e, baseGlobe));
 
       // add base map layer with all countries
       let worldTexture = mapTexture(countries, '#647089');
       let mapMaterial  = new THREE.MeshBasicMaterial({map: worldTexture, transparent: true});
       let baseMap = new THREE.Mesh(new THREE.SphereGeometry(456, segments, segments), mapMaterial);
+      baseMap.rotation.y = Math.PI;
       // baseMap.addEventListener('mousemove', (e) => this.onGlobeMousemove(e));
 
       this.scene.add(baseGlobe);
@@ -111,7 +112,6 @@ export default class globeScene {
 
     // Get pointc, convert to latitude/longitude
     const latlng = this.getEventCenter(baseGlobe, event, 456);
-    console.log('LATLNG', latlng);
 
     // Look for country at that latitude/longitude
     const country = this.geo.search(latlng[0], latlng[1]);
@@ -128,7 +128,8 @@ export default class globeScene {
       map = this.textureCache(country.code, '#3B3B3B');
       material = new THREE.MeshPhongMaterial({map: map, transparent: true});
       if (!this.overlay) {
-        this.overlay = new THREE.Mesh(new THREE.SphereGeometry(457, 40, 40), material);
+        this.overlay = new THREE.Mesh(new THREE.SphereGeometry(458, 40, 40), material);
+        this.overlay.rotation.y = Math.PI;
         this.scene.add(this.overlay);
       } else {
         this.overlay.material = material;
