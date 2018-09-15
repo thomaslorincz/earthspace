@@ -1,15 +1,15 @@
 import * as THREE from 'three';
 import { debounce } from './utils';
+import * as d3 from 'd3';
 
 export function setEvents(camera, items, type, wait) {
 
   let raycaster = new THREE.Raycaster();
 
   let listener = function(event) {
-
     let mouse = {
-      x: ((event.clientX - 1) / window.innerWidth ) * 2 - 1,
-      y: -((event.clientY - 1) / window.innerHeight) * 2 + 1
+      x: ((event.offsetX - 1) / parseFloat(d3.select('canvas').node().style.width) ) * 2 - 1,
+      y: -((event.offsetY - 1) / parseFloat(d3.select('canvas').node().style.height) ) * 2 + 1
     };
     let vector = new THREE.Vector3();
     vector.set(mouse.x, mouse.y, 0.5);
