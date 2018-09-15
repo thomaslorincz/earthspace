@@ -43,13 +43,13 @@ function init() {
     //EARTH
     var earthGeo = new THREE.SphereGeometry (455, 400, 400),
         earthMat = new THREE.MeshBasicMaterial();
-        earthMat.map = new THREE.TextureLoader().load('./3js_resources/textures/earth_lightsBW.jpg');
+        earthMat.map = new THREE.TextureLoader().load('/src/3js_resources/textures/earth_lightsBW.jpg');
     var chloroplethGeo = new THREE.SphereGeometry(456, 400, 400);
     earthMesh = new THREE.Mesh(earthGeo, earthMat);
     earthMesh.position.set(0, 0, 0);
     scene.add(earthMesh);
     var chloroplethMat = new THREE.MeshBasicMaterial();
-    chloroplethMat.map = new THREE.TextureLoader().load('./3js_resources/textures/earth_lightsBW.jpg');
+    chloroplethMat.map = new THREE.TextureLoader().load('/src/3js_resources/textures/earth_lightsBW.jpg');
     chloroplethMat.opacity = 0;
     chloroplethEarth = new THREE.Mesh( earthGeo, chloroplethMat);
     chloroplethEarth.scale.set(1.01,1.01,1.01);
@@ -58,7 +58,7 @@ function init() {
     //chloroplethEarth.rotation.set(0,-0.9,-0.2);
     scene.add(chloroplethEarth);
     
-    scene.background = new THREE.TextureLoader().load('./3js_resources/textures/milk_backg.jpg');
+    scene.background = new THREE.TextureLoader().load('/src/3js_resources/textures/milk_backg.jpg');
     chloroplethMapping();
 
     // change to a key event listener or look up a better way to do this
@@ -207,4 +207,4 @@ function render() {
     renderer.render(scene, camera); 
 }
 
-//export {init, animate}
+export {init, animate}
