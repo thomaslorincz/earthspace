@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import { debounce } from './utils';
 
-let raycaster = new THREE.Raycaster();
-
 export function setEvents(camera, items, type, wait) {
+
+  let raycaster = new THREE.Raycaster();
 
   let listener = function(event) {
 
@@ -11,13 +11,11 @@ export function setEvents(camera, items, type, wait) {
       x: ((event.clientX - 1) / window.innerWidth ) * 2 - 1,
       y: -((event.clientY - 1) / window.innerHeight) * 2 + 1
     };
-
     let vector = new THREE.Vector3();
     vector.set(mouse.x, mouse.y, 0.5);
     vector.unproject(camera);
 
     raycaster.ray.set(camera.position, vector.sub(camera.position).normalize());
-
     let target = raycaster.intersectObjects(items);
 
     if (target.length) {
