@@ -37,7 +37,7 @@ var indexRoute = require('./routes/index');
 
 app.use(indexRoute);
 
-const server = app.listen(process.env.PORT, process.env.IP, function(){
+const server = app.listen(8080, '0.0.0.0', function(){
     console.log("Server Started!");
 });
 
@@ -58,7 +58,7 @@ wss.on('connection', (ws) => {
   console.log('Target RTMP URL:', rtmpUrl);
   
   // Launch FFmpeg to handle all appropriate transcoding, muxing, and RTMP
-  const ffmpeg = child_process.spawn('ffmpeg', [
+  const ffmpeg = child_process.exec('ffmpeg', [
     // Facebook requires an audio track, so we create a silent one here.
     // Remove this line, as well as `-shortest`, if you send audio from the browser.
     '-f', 'lavfi', '-i', 'anullsrc',
