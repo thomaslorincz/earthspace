@@ -34,6 +34,7 @@ export default class globeScene {
     this.overlay = null;
     this.textureCache = null;
     this.geo = null;
+    this.satelliteRefs = null;
   }
 
   init() {
@@ -301,8 +302,13 @@ function satelliteHandler(snapshot) {
           latitudeStr  = satellite.degreesLat(latitude);
             
         var satRec = {latitude : latitudeStr, longitude : longitudeStr, altitude : height};
-
-        
+        var loader = new THREE.JSONLoader();
+        loader.load('3js_resources/model/ExAlta1_low.json', function(geometry, materials) {
+            var satModel = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial(color: '#000000'));
+        satModel.scale.x = satModel.scale.y = satModel.scale.z = 1;		
+        //this.satelliteRefs[satellites[key].norad : satModel];
+        scene.add( satModel );
+        });
     }
   }
 }
