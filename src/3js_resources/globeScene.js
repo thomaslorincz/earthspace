@@ -1,10 +1,10 @@
 import { setEvents } from '../common/setEvent';
-import {getEventCenter, geodecoder, getPoint} from '../common/geoHelpers';
 import { mapTexture } from '../common/mapTexture';
 import { memoize } from '../common/utils';
 import { getTween } from '../common/utils';
 import { feature as topojsonFeature } from 'topojson';
 import * as d3 from 'd3';
+import { geodecoder } from "../common/geoHelpers";
 
 export default class globeScene {
   constructor() {
@@ -13,13 +13,11 @@ export default class globeScene {
     this.scene = null;
     this.renderer = null;
     this.controls = null;
-    this.earthMesh = null;
-    this.choroplethEarth = null;
-    this.countryMap = null;
     this.currentCountry = null;
     this.overlay = null;
-    this.textureCache = null;
+    this.textureCache = {};
     this.geo = null;
+    this.countries = null;
   }
 
   init() {
@@ -45,15 +43,6 @@ export default class globeScene {
     this.controls.enableKeys = false;
     this.controls.addEventListener('change', () => this.render());
 
-    // EARTH
-    // let earthGeo = new THREE.SphereGeometry (455, 400, 400);
-    // let earthMat = new THREE.MeshBasicMaterial();
-    // earthMat.map = new THREE.TextureLoader().load('/src/3js_resources/textures/earth_lightsBW.jpg');
-
-    // this.earthMesh = new THREE.Mesh(earthGeo, earthMat);
-    // this.earthMesh.position.set(0, 0, 0);
-    // this.scene.add(this.earthMesh);
-
     this.scene.background = new THREE.TextureLoader().load('/src/3js_resources/textures/milk_backg.jpg');
 
     window.addEventListener('resize', () => this.onWindowResize(), false);
@@ -62,12 +51,12 @@ export default class globeScene {
       const segments = 155; // number of vertices. Higher = better mouse accuracy
 
       // Setup cache for country textures
-      const countries = topojsonFeature(data, data.objects.countries);
+      this.countries = topojsonFeature(data, data.objects.countries);
 
-      this.geo = geodecoder(countries.features);
-      this.textureCache = memoize((id, color) => {
+      this.geo = geodecoder(this.countries.features);
+      this.textureCache = memoize((id) => {
         const country = this.geo.find(id);
-        return mapTexture(country, color);
+        return mapTexture(country);
       });
 
       let oceanMaterial = new THREE.MeshBasicMaterial();
@@ -79,11 +68,10 @@ export default class globeScene {
       baseGlobe.addEventListener('click', (e) => this.onGlobeClick(e, baseGlobe));
 
       // add base map layer with all countries
-      let worldTexture = mapTexture(countries, '#000000');
-      let mapMaterial  = new THREE.MeshBasicMaterial({map: worldTexture, transparent: true, opacity: 0.9});
+      let worldTexture = mapTexture(this.countries);
+      let mapMaterial  = new THREE.MeshBasicMaterial({map: worldTexture, transparent: true, opacity: 0.2});
       let baseMap = new THREE.Mesh(new THREE.SphereGeometry(456, segments, segments), mapMaterial);
       baseMap.rotation.y = Math.PI;
-      // baseMap.addEventListener('mousemove', (e) => this.onGlobeMousemove(e));
 
       this.scene.add(baseGlobe);
       this.scene.add(baseMap);
@@ -92,26 +80,18 @@ export default class globeScene {
     });
   }
 
-  distanceBetween(point1, point2) {
-    const dx = point2.x - point1.x;
-    const dy = point2.y - point1.y;
-    const dz = point2.z - point1.z;
-    return Math.sqrt((dx*dx) + (dy*dy) + (dz*dz));
-  }
+  choropleth(dataMap, min, max) {
+    // add base map layer with all countries
+    let worldTexture = mapTexture(this.countries, dataMap, min, max);
+    let mapMaterial  = new THREE.MeshBasicMaterial({map: worldTexture, transparent: true, opacity: 0.8});
+    let baseMap = new THREE.Mesh(new THREE.SphereGeometry(458, 155, 155), mapMaterial);
+    baseMap.rotation.y = Math.PI;
 
-  latLongToCoords(latitude, longitude, radius) {
-    const phi   = (90-latitude)*(Math.PI/180);
-    const theta = (longitude+180)*(Math.PI/180);
-
-    const x = -((radius) * Math.sin(phi)*Math.cos(theta));
-    const y = ((radius) * Math.cos(phi));
-    const z = ((radius) * Math.sin(phi)*Math.sin(theta));
-
-    return [x,y,z];
+    this.scene.add(baseMap);
   }
 
   onGlobeClick(event, baseGlobe) {
-    // Get pointc, convert to latitude/longitude
+    // Get point, convert to latitude/longitude
     const latlng = this.getEventCenter(baseGlobe, event, 456);
 
     // Look for country at that latitude/longitude
@@ -119,17 +99,23 @@ export default class globeScene {
 
     if (!country) {
       this.controls.autoRotate = true;
+      document.getElementById('selection').innerText = 'No selection';
       return;
     }
 
+    document.getElementById('selection').innerText = country.code;
+
     // Get new camera position
-    var temp = new THREE.Mesh();
-    var returnCoords = this.convertToXYZ(latlng, 900);
+    let temp = new THREE.Mesh();
+    const returnCoords = this.convertToXYZ(latlng, 900);
     temp.position.set(returnCoords.x, returnCoords.y, returnCoords.z);
     temp.lookAt(baseGlobe.position);
     temp.rotateY(Math.PI);
 
     for (let key in temp.rotation) {
+      if (!temp.rotation.hasOwnProperty(key)) {
+        continue;
+      }
       if (temp.rotation[key] - this.camera.rotation[key] > Math.PI) {
         temp.rotation[key] -= Math.PI * 2;
       } else if (this.camera.rotation[key] - temp.rotation[key] > Math.PI) {
@@ -138,12 +124,10 @@ export default class globeScene {
     }
 
     this.controls.autoRotate = false;
-    //var tweenPos = this.getTween(this.camera, 'position', temp.position, baseGlobe);
-    var tweenPos = getTween.call(this.camera, 'position', temp.position);
+    const tweenPos = getTween.call(this.camera, 'position', temp.position);
     d3.timer(tweenPos);
 
-    //var tweenRot = this.getTween(this.camera, 'rotation', temp.rotation, baseGlobe);
-    var tweenRot = getTween.call(this.camera, 'rotation', temp.rotation);
+    const tweenRot = getTween.call(this.camera, 'rotation', temp.rotation);
     d3.timer(tweenRot);
   }
 
@@ -151,25 +135,22 @@ export default class globeScene {
     let map;
     let material;
 
-    // Get pointc, convert to latitude/longitude
+    // Get point, convert to latitude/longitude
     const latlng = this.getEventCenter(baseGlobe, event, 456);
 
     // Look for country at that latitude/longitude
     const country = this.geo.search(latlng[0], latlng[1]);
 
     if (country !== null && country.code !== this.currentCountry) {
-
       // Track the current country displayed
       this.currentCountry = country.code;
 
-      // Update the html
-      d3.select('#toolbar').node().innerText = country.code;
-
       // Overlay the selected country
-      map = this.textureCache(country.code, '#3B3B3B');
+      map = this.textureCache(country.code);
       material = new THREE.MeshBasicMaterial({map: map, transparent: true});
+      console.log(map, material);
       if (!this.overlay) {
-        this.overlay = new THREE.Mesh(new THREE.SphereGeometry(458, 40, 40), material);
+        this.overlay = new THREE.Mesh(new THREE.SphereGeometry(460, 40, 40), material);
         this.overlay.rotation.y = Math.PI;
         this.scene.add(this.overlay);
       } else {
@@ -180,51 +161,34 @@ export default class globeScene {
 
   convertToXYZ(point, radius) {
     radius = radius || 200;
-  
-    var latRads = ( 90 - point[0]) * Math.PI / 180;
-    var lngRads = (180 - point[1]) * Math.PI / 180;
-  
-    var x = radius * Math.sin(latRads) * Math.cos(lngRads);
-    var y = radius * Math.cos(latRads);
-    var z = radius * Math.sin(latRads) * Math.sin(lngRads);
-    
+
+    const latRads = (90 - point[0]) * Math.PI / 180;
+    const lngRads = (180 - point[1]) * Math.PI / 180;
+
+    const x = radius * Math.sin(latRads) * Math.cos(lngRads);
+    const y = radius * Math.cos(latRads);
+    const z = radius * Math.sin(latRads) * Math.sin(lngRads);
+
     return {x: x, y: y, z: z};
   }
-/*
-  getTween(prop, to, dest, globe) {
-    var time = dest.length || 500;
-    var node = this;
-    var interpol = d3.interpolateObject(prop.camera, globe);
-    return function (t) {
-      if (t >= time) {
-        console.log("Done")
-        return true;
-      } else {
-        console.log(t);
-        node[prop] = interpol(t / time);
-      }
-    };
-  };*/
 
   getEventCenter(globe, event, radius) {
     radius = radius || 200;
 
-    var point = this.getPoint(globe, event);
+    const point = this.getPoint(globe, event);
 
-    var latRads = Math.acos(point.y / radius);
-    var lngRads = Math.atan2(point.z, point.x);
-    var lat = (Math.PI / 2 - latRads) * (180 / Math.PI);
-    var lng = (Math.PI - lngRads) * (180 / Math.PI);
+    const latRads = Math.acos(point.y / radius);
+    const lngRads = Math.atan2(point.z, point.x);
+    const lat = (Math.PI / 2 - latRads) * (180 / Math.PI);
+    const lng = (Math.PI - lngRads) * (180 / Math.PI);
 
     return [lat, lng - 180];
   }
 
   getPoint(globe, event) {
-    // Get the vertices
-    // console.log(this, event);
-    let a = globe.geometry.vertices[event.face.a];
-    let b = globe.geometry.vertices[event.face.b];
-    let c = globe.geometry.vertices[event.face.c];
+    const a = globe.geometry.vertices[event.face.a];
+    const b = globe.geometry.vertices[event.face.b];
+    const c = globe.geometry.vertices[event.face.c];
 
     return {
       x: (a.x + b.x + c.x) / 3,
@@ -233,7 +197,6 @@ export default class globeScene {
     };
   }
 
-  // responsively resize 3js canvas to window size
   onWindowResize() {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
