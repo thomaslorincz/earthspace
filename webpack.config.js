@@ -9,14 +9,6 @@ module.exports = {
     path: path.join(__dirname, 'dist'),
     filename: 'bundle.js'
   },
-  devServer: {
-    port: 8080,
-    open: true,
-    hot: true,
-    watchOptions: {
-      poll: true
-    }
-  },
   node: {
     fs: 'empty',
     net: 'empty'

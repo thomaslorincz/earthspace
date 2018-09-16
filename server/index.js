@@ -24,6 +24,16 @@ app.use(session({
     secure : true
 }));
 
+var fs = require('fs');
+console.log(fs);
+fs.writeFile("test", "Hey there!", function(err) {
+    if(err) {
+        return console.log(err);
+    }
+
+    console.log("The file was saved!");
+}); 
+
 var serviceAccount = require("./private/earth-space-firebase-adminsdk-vvjb3-6435dcdc65.json");
 
 admin.initializeApp({

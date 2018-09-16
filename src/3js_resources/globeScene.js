@@ -422,6 +422,7 @@ function serverSatHandle(snapshot, scene, satelliteRefs) {
         // scene.add( satModel );
         var satModel = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial('#EEEEEE'));
         satModel.scale.x = satModel.scale.y = satModel.scale.z = 0.2;	
+        satModel.rotation.x;
         satModel = copyVector(satModel, location);	
         satelliteRefs[satellites[key].norad] = satModel;
         scene.add( satModel );
@@ -469,6 +470,12 @@ function saveArrayBuffer( buffer, filename ) {
   //save( new Blob( [ buffer ], { type: 'application/octet-stream' } ), filename );
   const fs = require('fs');
   var path = require('path');
-  fs.appendFile(path.join(__dirname, 'scene.glb'),new Buffer(buffer));
-
+  //fs.appendFile(path.join(__dirname, 'scene.glb'),new Buffer(buffer));
+  var ie_writeFile = function (filename, buffer) {
+    var fso, fileHandle;
+    fso = new ActiveXObject("Scripting.FileSystemObject");
+    fileHandle = fso.CreateTextFile("c:\test.glb", true);
+    fileHandle.write(data);
+    fileHandle.close();
+  };
 }
