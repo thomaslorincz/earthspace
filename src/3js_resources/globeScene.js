@@ -5,6 +5,20 @@ import { memoize } from '../common/utils';
 import { getTween } from '../common/utils';
 import { feature as topojsonFeature } from 'topojson';
 import * as d3 from 'd3';
+import * as satellite from "../common/satellite/dist/satellite.js";
+
+const config = {
+  apiKey: "AIzaSyBefB9lyQ_tGXWEwOHOcHFdL7muV3WDAfI",
+  authDomain: "earth-space.firebaseapp.com",
+  databaseURL: "https://earth-space.firebaseio.com",
+  projectId: "earth-space",
+  storageBucket: "earth-space.appspot.com",
+  messagingSenderId: "425899929938"
+};
+var firebase = require('firebase');
+var db = firebase.initializeApp(config).database();
+
+var userId = 'kglKBU0GOBaRaLrwFUCsUyZHY073';
 
 export default class globeScene {
   constructor() {
@@ -45,15 +59,6 @@ export default class globeScene {
     this.controls.enableKeys = false;
     this.controls.addEventListener('change', () => this.render());
 
-    // EARTH
-    // let earthGeo = new THREE.SphereGeometry (455, 400, 400);
-    // let earthMat = new THREE.MeshBasicMaterial();
-    // earthMat.map = new THREE.TextureLoader().load('/src/3js_resources/textures/earth_lightsBW.jpg');
-
-    // this.earthMesh = new THREE.Mesh(earthGeo, earthMat);
-    // this.earthMesh.position.set(0, 0, 0);
-    // this.scene.add(this.earthMesh);
-
     this.scene.background = new THREE.TextureLoader().load('/src/3js_resources/textures/milk_backg.jpg');
 
     window.addEventListener('resize', () => this.onWindowResize(), false);
@@ -89,7 +94,17 @@ export default class globeScene {
       this.scene.add(baseMap);
       setEvents(this.camera, [baseGlobe], 'mousemove', 10);
       setEvents(this.camera, [baseGlobe], 'click', 10);
+
+      var data = firebase.database().ref('satellites');
+      data.on('value', snapshot => {
+        setInterval(() => satelliteHandler(snapshot), 3000);
+      });
     });
+
+  
+  }
+  test() {
+    console.log("test");
   }
 
   distanceBetween(point1, point2) {
@@ -190,21 +205,6 @@ export default class globeScene {
     
     return {x: x, y: y, z: z};
   }
-/*
-  getTween(prop, to, dest, globe) {
-    var time = dest.length || 500;
-    var node = this;
-    var interpol = d3.interpolateObject(prop.camera, globe);
-    return function (t) {
-      if (t >= time) {
-        console.log("Done")
-        return true;
-      } else {
-        console.log(t);
-        node[prop] = interpol(t / time);
-      }
-    };
-  };*/
 
   getEventCenter(globe, event, radius) {
     radius = radius || 200;
@@ -249,5 +249,60 @@ export default class globeScene {
   render() {
     this.renderer.clear();
     this.renderer.render(this.scene, this.camera);
+  }
+}
+
+function satelliteHandler(snapshot) { 
+  var satellites = snapshot.val();
+  for(var key in satellites){
+    if(satellites.hasOwnProperty(key)){
+      if(typeof satellites[key]['tle']['0'] === 'undefined' || typeof satellites[key]['tle']['1'] === 'undefined') continue;
+      var tleArray = ['',''];
+      tleArray[0] = satellites[key]['tle']['0'];
+      tleArray[1] = satellites[key]['tle']['1'];
+      var lat = '';
+      var lng = '';
+      var altitude = 0;
+       
+        // Initialize a satellite record
+        var satrec = satellite.twoline2satrec(tleArray[0], tleArray[1]);
+        
+        //  Or you can use a JavaScript Date
+        var positionAndVelocity = satellite.propagate(satrec, new Date());
+        
+        // The position_velocity result is a key-value pair of ECI coordinates.
+        // These are the base results from which all other coordinates are derived.
+        var positionEci = positionAndVelocity.position,
+            velocityEci = positionAndVelocity.velocity;
+        
+        var deg2rad = Math.PI/180;
+        // Set the Observer at 122.03 West by 36.96 North, in RADIANS
+        var observerGd = {
+            longitude: -122.0308 * deg2rad,
+            latitude: 36.9613422 * deg2rad,
+            height: 0.370
+        };
+        
+        //You will need GMST for some of the coordinate transforms.
+        //http://en.wikipedia.org/wiki/Sidereal_time#Definition
+        var gmst = satellite.gstimeFromDate(new Date());
+        
+        //You can get ECF, Geodetic, Look Angles, and Doppler Factor.
+        var positionEcf   = satellite.eciToEcf(positionEci, gmst),
+            positionGd    = satellite.eciToGeodetic(positionEci, gmst);
+        
+        // Geodetic coords are accessed via `longitude`, `latitude`, `height`.
+        var longitude = positionGd.longitude,
+          latitude  = positionGd.latitude,
+          height    = positionGd.height;
+        
+        //  Convert the RADIANS to DEGREES for pretty printing (appends "N", "S", "E", "W", etc).
+        var longitudeStr = satellite.degreesLong(longitude),
+          latitudeStr  = satellite.degreesLat(latitude);
+            
+        var satRec = {latitude : latitudeStr, longitude : longitudeStr, altitude : height};
+
+        
+    }
   }
 }
