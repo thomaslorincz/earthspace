@@ -1,5 +1,6 @@
 import globeScene from './3js_resources/globeScene';
 
+
 const earth = new globeScene();
 earth.init();
 earth.animate();
