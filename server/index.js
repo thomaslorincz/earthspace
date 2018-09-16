@@ -1,3 +1,5 @@
+//
+
 var express      = require('express'),
     app          = express(),
     session      = require('express-session'),
@@ -10,6 +12,7 @@ app.use(bodyParser.urlencoded({extended : true}));
 app.use(express.static(__dirname));
 app.use(express.static(__dirname + '/public'));
 app.set('view engine', 'ejs');
+app.use(express.static(path.join(__dirname, 'dist')));
 
 app.use(session({
     cookieName: 'session',
@@ -45,7 +48,8 @@ app.get('/', function(request, response){
         satelliteArray.push(tleArray);
       }
     }
-    response.render('./src/index.ejs', {satellites : satelliteArray});
+    response.render('../views/src/index.ejs', {satellites : satelliteArray});
+    response.sendFile(path.join(__dirname, 'dist/index.html'));
   }, function(error){
   });
 });

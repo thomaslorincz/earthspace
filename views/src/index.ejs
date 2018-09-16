@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+	<script src="/views/src/3js_resources/threeLibs/three.js"></script>
+	<script src="/views/src/3js_resources/threeLibs/renderers/CanvasRenderer.js"></script>
+  <script src="/views/src/3js_resources/threeLibs/controls/OrbitControls.js"></script>
+  <script src="/public/satellite/dist/satellite.js"></script>
+  <title>earthspace</title>
+  <link href="https://fonts.googleapis.com/css?family=Comfortaa:300|Montserrat:200,400" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link href="/views/src/style.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+<div id="toolbar">earthspace</div>
+<div id="content">
+  <div id="panel">
+    <div id="minControl">
+      <i id="minIcon" class="material-icons">chevron_left</i>
+    </div>
+    <div id="dataContainer"></div>
+  </div>
+  <div id="minimizedPanel">
+    <i id="maxIcon" class="material-icons">chevron_right</i>
+  </div>
+  <div id="earth"></div>
+</div>
+<script id="vertexShader" src="/views/src/3js_resources/vertexShader.js" type="x-shader/x-vertex"></script>
+<script id="fragmentShader" src="/views/src/3js_resources/fragmentShader.js" type="x-shader/x-fragment"></script>
+<script>
+  var satellites = <%- JSON.stringify(satellites) %>;
+  setInterval(update,1000);
+  function update(){
+    for (var i = 0; i < satellites.length; i++) {
+      var satRec = getSatRec(satellites[i]);
+    }
+  }
+  function getSatRec(tleArray){
+  var lat = '';
+  var lng = '';
+  var altitude = 0;
+    
+    // Initialize a satellite record
+    var satrec = satellite.twoline2satrec(tleArray[0], tleArray[1]);
+    
+    //  Or you can use a JavaScript Date
+    var positionAndVelocity = satellite.propagate(satrec, new Date());
+    
+    // The position_velocity result is a key-value pair of ECI coordinates.
+    // These are the base results from which all other coordinates are derived.
+    var positionEci = positionAndVelocity.position,
+        velocityEci = positionAndVelocity.velocity;
+    
+    var deg2rad = Math.PI/180;
+    // Set the Observer at 122.03 West by 36.96 North, in RADIANS
+    var observerGd = {
+        longitude: -122.0308 * deg2rad,
+        latitude: 36.9613422 * deg2rad,
+        height: 0.370
+    };
+    
+    //You will need GMST for some of the coordinate transforms.
+    //http://en.wikipedia.org/wiki/Sidereal_time#Definition
+    var gmst = satellite.gstimeFromDate(new Date());
+    
+    //You can get ECF, Geodetic, Look Angles, and Doppler Factor.
+    var positionEcf   = satellite.eciToEcf(positionEci, gmst),
+        positionGd    = satellite.eciToGeodetic(positionEci, gmst);
+    
+    // Geodetic coords are accessed via `longitude`, `latitude`, `height`.
+    var longitude = positionGd.longitude,
+      latitude  = positionGd.latitude,
+      height    = positionGd.height;
+    
+    //  Convert the RADIANS to DEGREES for pretty printing (appends "N", "S", "E", "W", etc).
+    var longitudeStr = satellite.degreesLong(longitude),
+      latitudeStr  = satellite.degreesLat(latitude);
+       
+    return {latitude : latitudeStr, longitude : longitudeStr, altitude : height};
+}
+</script>
+</body>
+</html>
