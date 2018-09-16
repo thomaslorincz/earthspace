@@ -6,6 +6,7 @@ import { getTween } from '../common/utils';
 import { feature as topojsonFeature } from 'topojson';
 import * as d3 from 'd3';
 import * as satellite from "../common/satellite/dist/satellite.js";
+import * as GLTFExporter from "./threeLibs/exporters/GLTFExporter.js";
 
 const config = {
   apiKey: "AIzaSyBefB9lyQ_tGXWEwOHOcHFdL7muV3WDAfI",
@@ -20,9 +21,12 @@ var db = firebase.initializeApp(config).database();
 
 var userId = 'kglKBU0GOBaRaLrwFUCsUyZHY073';
 
+var scene = null;
+
 export default class globeScene {
   constructor() {
     this.camera = null;
+    this.currentCamState = 3;
     this.cameraController = null;
     this.scene = null;
     this.renderer = null;
@@ -35,6 +39,7 @@ export default class globeScene {
     this.textureCache = null;
     this.geo = null;
     this.satelliteRefs = {};
+    this.planeRefs = {};
   }
 
   init() {
@@ -46,8 +51,8 @@ export default class globeScene {
     this.cameraController = new THREE.Object3D();
     this.cameraController.add(this.camera);
 
-    this.scene = new THREE.Scene();
-    this.scene.add(this.cameraController);
+    scene = new THREE.Scene();
+    scene.add(this.cameraController);
 
     this.renderer = new THREE.WebGLRenderer({antialiasing : true});
     this.renderer.setPixelRatio(window.devicePixelRatio);
@@ -60,12 +65,12 @@ export default class globeScene {
     this.controls.enableKeys = false;
     this.controls.addEventListener('change', () => this.render());
 
-    this.scene.background = new THREE.TextureLoader().load('/src/3js_resources/textures/milk_backg.jpg');
+    scene.background = new THREE.TextureLoader().load('/src/3js_resources/textures/milk_backg.jpg');
 
     window.addEventListener('resize', () => this.onWindowResize(), false);
 
     d3.json('../../data/world.json').then((data) => {
-      const segments = 155; // number of vertices. Higher = better mouse accuracy
+      const segments = 40; // number of vertices. Higher = better mouse accuracy
 
       // Setup cache for country textures
       const countries = topojsonFeature(data, data.objects.countries);
@@ -77,12 +82,12 @@ export default class globeScene {
       });
 
       let oceanMaterial = new THREE.MeshBasicMaterial();
-      oceanMaterial.map = new THREE.TextureLoader().load('/src/3js_resources/textures/earth_lightsBW.jpg');
+      oceanMaterial.map = new THREE.TextureLoader().load('/src/3js_resources/textures/earth_low.jpg');
       let sphere = new THREE.SphereGeometry(455, segments, segments);
-      let baseGlobe = new THREE.Mesh(sphere, oceanMaterial);
-      baseGlobe.rotation.y = Math.PI;
-      baseGlobe.addEventListener('mousemove', (e) => this.onGlobeMouseMove(e, baseGlobe));
-      baseGlobe.addEventListener('click', (e) => this.onGlobeClick(e, baseGlobe));
+      this.earthMesh = new THREE.Mesh(sphere, oceanMaterial);
+      this.earthMesh.rotation.y = Math.PI;
+      this.earthMesh.addEventListener('mousemove', (e) => this.onGlobeMouseMove(e, this.earthMesh));
+      this.earthMesh.addEventListener('click', (e) => this.onGlobeClick(e, this.earthMesh));
 
       // add base map layer with all countries
       let worldTexture = mapTexture(countries, '#000000');
@@ -91,18 +96,46 @@ export default class globeScene {
       baseMap.rotation.y = Math.PI;
       // baseMap.addEventListener('mousemove', (e) => this.onGlobeMousemove(e));
 
-      this.scene.add(baseGlobe);
-      this.scene.add(baseMap);
-      setEvents(this.camera, [baseGlobe], 'mousemove', 10);
-      setEvents(this.camera, [baseGlobe], 'click', 10);
-
-      var data = firebase.database().ref('satellites');
-      data.on('value', snapshot => {
-        setInterval(() => satelliteHandler(snapshot, this.scene, this.satelliteRefs), 10000);
+      scene.add(this.earthMesh);
+      scene.add(baseMap);
+      setEvents(this.camera, [this.earthMesh], 'mousemove', 10);
+      setEvents(this.camera, [this.earthMesh], 'click', 10);
+      /*
+      var loader = new THREE.JSONLoader();
+      var test = loader.load('/src/3js_resources/sat.json', function(geometry, materials) {
+          var cube_sat = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial(materials));
+      cube_sat.scale.x = cube_sat.scale.y = cube_sat.scale.z = 0.4;		
+      scene.add( cube_sat );
       });
+      console.log(test);
+      scene = scene;*/
+      // var data = firebase.database().ref('satellites');
+      // data.on('value', snapshot => {
+      //   setInterval(() => satelliteHandler(snapshot, scene, this.satelliteRefs), 10000);
+      // });
+      
+      var satData = firebase.database().ref('satellites');
+      setInterval(() => satData.on('value', snapshot => {
+        serverSatHandle(snapshot, scene, this.satelliteRefs);
+      }), 10000);
+      /*
+      var planeData = firebase.database().ref('planes');
+      setInterval(() => planeData.on('value', snapshot => {
+        planeHandle(snapshot, scene, this.planeRefs);
+      }), 20000);*/
     });
+  }
 
-  
+  exportSceneGLB() {
+    var exporter = new THREE.GLTFExporter();
+
+		exporter.parse( scene, function ( result ) {
+
+			saveArrayBuffer( result, 'scene.glb' );
+
+			// forceIndices: true, forcePowerOfTwoTextures: true
+			// to allow compatibility with facebook
+		}, { binary: true, forceIndices: true, forcePowerOfTwoTextures: true } );
   }
 
   distanceBetween(point1, point2) {
@@ -125,6 +158,7 @@ export default class globeScene {
 
   onGlobeClick(event, baseGlobe) {
     // Get pointc, convert to latitude/longitude
+    this.exportSceneGLB();
     const latlng = this.getEventCenter(baseGlobe, event, 456);
 
     // Look for country at that latitude/longitude
@@ -184,11 +218,15 @@ export default class globeScene {
       if (!this.overlay) {
         this.overlay = new THREE.Mesh(new THREE.SphereGeometry(458, 40, 40), material);
         this.overlay.rotation.y = Math.PI;
-        this.scene.add(this.overlay);
+        scene.add(this.overlay);
       } else {
         this.overlay.material = material;
       }
     }
+  }
+
+  onZoomSample(newZoomState) {
+    //console.log(newZoomState);
   }
 
   convertToXYZ(lat, long, radius) {
@@ -219,7 +257,6 @@ export default class globeScene {
 
   getPoint(globe, event) {
     // Get the vertices
-    // console.log(this, event);
     let a = globe.geometry.vertices[event.face.a];
     let b = globe.geometry.vertices[event.face.b];
     let c = globe.geometry.vertices[event.face.c];
@@ -229,6 +266,19 @@ export default class globeScene {
       y: (a.y + b.y + c.y) / 3,
       z: (a.z + b.z + c.z) / 3
     };
+  }
+
+  cameraDistanceCheck() {
+    var currentDist = this.distanceBetween(this.camera.position, new THREE.Vector3(0,0,0));
+    var calculatedCamState = 3;
+    if (currentDist > 800) {
+      calculatedCamState = 3;
+    } else if (currentDist > 600) {
+      calculatedCamState = 2;
+    } else {
+      calculatedCamState = 1;
+    }
+    return calculatedCamState;
   }
 
   // responsively resize 3js canvas to window size
@@ -242,11 +292,17 @@ export default class globeScene {
     window.requestAnimationFrame(() => this.animate());
     this.controls.update();
     this.render();
+    //console.log(this.distanceBetween(this.camera.position,this.earthMesh.position));
+    var refLastCamState = this.currentCamState;
+    this.currentCamState = this.cameraDistanceCheck();
+    if (this.currentCamState != refLastCamState) {
+      this.onZoomSample(this.currentCamState);
+    }
   }
 
   render() {
     this.renderer.clear();
-    this.renderer.render(this.scene, this.camera);
+    this.renderer.render(scene, this.camera);
   }
 }
 
@@ -299,7 +355,6 @@ function satelliteHandler(snapshot, scene, satelliteRefs) {
         //You can get ECF, Geodetic, Look Angles, and Doppler Factor.
         var positionEcf   = satellite.eciToEcf(positionEci, gmst),
             positionGd    = satellite.eciToGeodetic(positionEci, gmst);
-        console.log(positionGd);
         
         // Geodetic coords are accessed via `longitude`, `latitude`, `height`.
         var longitude = positionGd.longitude,
@@ -320,7 +375,6 @@ function satelliteHandler(snapshot, scene, satelliteRefs) {
         //});
 
         var location = latLongToCoords(satellites[key]['satRec'].latitude, satellites[key]['satRec'].longitude, 500);
-        console.log(latitude, longitude);
         
         if (!(satellites[key].norad in satelliteRefs)) {
           var satModel = new THREE.Mesh(new THREE.CubeGeometry(0.5,0.5,0.5), new THREE.MeshBasicMaterial('#EEEEEE'));
@@ -335,6 +389,49 @@ function satelliteHandler(snapshot, scene, satelliteRefs) {
   }
 }
 
+function planeHandle(snapshot, scene, planeRefs) {
+  var planes = snapshot.val();
+  for(var key in planes) {
+    if(planes.hasOwnProperty(key)) {
+      var targetLoc = latLongToCoords(planes[key].lat, planes[key].lon, 450 + (planes[key].alt/1000));
+      if (!(key in planeRefs)) {
+        var planeModel = new THREE.Mesh(new THREE.CubeGeometry(0.5,0.5,0.5), new THREE.MeshBasicMaterial('#EEEEEE'));
+        planeModel.scale.x = planeModel.scale.y = planeModel.scale.z = 2;		
+        planeRefs[planes[key].norad] = planeModel;
+        planeRefs[planes[key].norad] = copyVector(planeModel, location);
+        scene.add( planeModel );
+      } else {
+        planeRefs[planes[key].norad] = copyVector(planeRefs[planes[key].norad], location);
+      }
+    }
+  }
+}
+
+function serverSatHandle(snapshot, scene, satelliteRefs) {
+  var satellites = snapshot.val();
+  var loader = new THREE.JSONLoader();
+  loader.load('/src/3js_resources/sat.json', function(geometry) {
+  for(var key in satellites){
+    if(satellites.hasOwnProperty(key)){
+      var location = latLongToCoords(satellites[key]['satRec'].latitude, satellites[key]['satRec'].longitude, 600 + satellites[key]['satRec'].altitude/100);
+      if (!(satellites[key].norad in satelliteRefs)) {
+        // var satModel = new THREE.Mesh(new THREE.CubeGeometry(0.5,0.5,0.5), new THREE.MeshBasicMaterial('#EEEEEE'));
+        // satModel.scale.x = satModel.scale.y = satModel.scale.z = 2;		
+        // satelliteRefs[satellites[key].norad] = satModel;
+        // satelliteRefs[satellites[key].norad] = copyVector(satModel, location);
+        // scene.add( satModel );
+        var satModel = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial('#EEEEEE'));
+        satModel.scale.x = satModel.scale.y = satModel.scale.z = 0.2;	
+        satModel = copyVector(satModel, location);	
+        satelliteRefs[satellites[key].norad] = satModel;
+        scene.add( satModel );
+      } else {
+        satelliteRefs[satellites[key].norad] = copyVector(satelliteRefs[satellites[key].norad], location);
+      }
+    }
+  }
+  });
+}
 
 function convertCoordToXYZ(lat, long, radius) {
   radius = radius || 200;
@@ -354,4 +451,24 @@ function copyVector(object, vector2) {
   object.position.y = vector2.y;
   object.position.z = vector2.z;
   return object;
+}
+
+var link = document.createElement( 'a' );
+link.style.display = 'none';
+document.body.appendChild( link ); // Firefox workaround, see #6594
+
+function save( blob, filename ) {
+
+  link.href = URL.createObjectURL( blob );
+  link.download = filename || 'data.json';
+  link.click();
+}
+
+function saveArrayBuffer( buffer, filename ) {
+
+  //save( new Blob( [ buffer ], { type: 'application/octet-stream' } ), filename );
+  const fs = require('fs');
+  var path = require('path');
+  fs.appendFile(path.join(__dirname, 'scene.glb'),new Buffer(buffer));
+
 }
