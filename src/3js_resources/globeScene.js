@@ -36,7 +36,7 @@ export default class globeScene {
     this.countryMap = null;
     this.currentCountry = null;
     this.overlay = null;
-    this.textureCache = null;
+    this.textureCache = {};
     this.geo = null;
     this.satelliteRefs = {};
     this.planeRefs = {};
@@ -76,9 +76,9 @@ export default class globeScene {
       const countries = topojsonFeature(data, data.objects.countries);
 
       this.geo = geodecoder(countries.features);
-      this.textureCache = memoize((id, color) => {
+      this.textureCache = memoize((id) => {
         const country = this.geo.find(id);
-        return mapTexture(country, color);
+        return mapTexture(country);
       });
 
       let oceanMaterial = new THREE.MeshBasicMaterial();
@@ -90,7 +90,7 @@ export default class globeScene {
       this.earthMesh.addEventListener('click', (e) => this.onGlobeClick(e, this.earthMesh));
 
       // add base map layer with all countries
-      let worldTexture = mapTexture(countries, '#000000');
+      let worldTexture = mapTexture(countries);
       let mapMaterial  = new THREE.MeshBasicMaterial({map: worldTexture, transparent: true, opacity: 0.9});
       let baseMap = new THREE.Mesh(new THREE.SphereGeometry(456, segments, segments), mapMaterial);
       baseMap.rotation.y = Math.PI;
@@ -471,11 +471,11 @@ function saveArrayBuffer( buffer, filename ) {
   const fs = require('fs');
   var path = require('path');
   //fs.appendFile(path.join(__dirname, 'scene.glb'),new Buffer(buffer));
-  var ie_writeFile = function (filename, buffer) {
+  /*var ie_writeFile = function (filename, buffer) {
     var fso, fileHandle;
     fso = new ActiveXObject("Scripting.FileSystemObject");
     fileHandle = fso.CreateTextFile("c:\test.glb", true);
     fileHandle.write(data);
     fileHandle.close();
-  };
+  };*/
 }
