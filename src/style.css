@@ -25,6 +25,20 @@ body {
   z-index: 2;
 }
 
+#exportButton {
+  display: inline-block;
+  position: relative;
+  font-size: 12px;
+  line-height: 24px;
+  float: right;
+  cursor: pointer;
+  width: auto;
+  height: auto;
+  left: -48px;
+  top: 6px;
+  border: 1px solid #2B2B2B;
+}
+
 #content {
   display: block;
   position: relative;
