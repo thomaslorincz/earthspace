@@ -99,8 +99,8 @@ export default class globeScene {
       setEvents(this.camera, [this.earthMesh], 'mousemove', 10);
       setEvents(this.camera, [this.earthMesh], 'click', 10);
 
-      document.getElementById("exportBtn").addEventListener("click", function() {
-        exportSceneGLB();
+      document.getElementById("exportButton").addEventListener("click", () => {
+        this.exportSceneGLB();
       })
       /*
       var loader = new THREE.JSONLoader();
@@ -120,11 +120,11 @@ export default class globeScene {
       setInterval(() => satData.on('value', snapshot => {
         this.serverSatHandle(snapshot, this.scene, this.satelliteRefs);
       }), 10000);
-      
+      /*
       var planeData = firebase.database().ref('planes');
       setInterval(() => planeData.on('value', snapshot => {
         planeHandle(snapshot, scene, this.planeRefs);
-      }), 20000);
+      }), 20000);*/
     });
   }
 
@@ -158,7 +158,6 @@ export default class globeScene {
 
   onGlobeClick(event, baseGlobe) {
     // Get pointc, convert to latitude/longitude
-    this.exportSceneGLB();
     const latlng = this.getEventCenter(baseGlobe, event, 456);
 
     // Look for country at that latitude/longitude
