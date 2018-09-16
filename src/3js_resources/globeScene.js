@@ -100,6 +100,10 @@ export default class globeScene {
       scene.add(baseMap);
       setEvents(this.camera, [this.earthMesh], 'mousemove', 10);
       setEvents(this.camera, [this.earthMesh], 'click', 10);
+
+      document.getElementById("exportBtn").addEventListener("click", function() {
+        exportSceneGLB();
+      })
       /*
       var loader = new THREE.JSONLoader();
       var test = loader.load('/src/3js_resources/sat.json', function(geometry, materials) {
@@ -118,11 +122,11 @@ export default class globeScene {
       setInterval(() => satData.on('value', snapshot => {
         serverSatHandle(snapshot, scene, this.satelliteRefs);
       }), 10000);
-      /*
+      
       var planeData = firebase.database().ref('planes');
       setInterval(() => planeData.on('value', snapshot => {
         planeHandle(snapshot, scene, this.planeRefs);
-      }), 20000);*/
+      }), 20000);
     });
   }
 
@@ -391,6 +395,7 @@ function satelliteHandler(snapshot, scene, satelliteRefs) {
 
 function planeHandle(snapshot, scene, planeRefs) {
   var planes = snapshot.val();
+  console.log(snapshot.val());
   for(var key in planes) {
     if(planes.hasOwnProperty(key)) {
       var targetLoc = latLongToCoords(planes[key].lat, planes[key].lon, 450 + (planes[key].alt/1000));
@@ -398,13 +403,14 @@ function planeHandle(snapshot, scene, planeRefs) {
         var planeModel = new THREE.Mesh(new THREE.CubeGeometry(0.5,0.5,0.5), new THREE.MeshBasicMaterial('#EEEEEE'));
         planeModel.scale.x = planeModel.scale.y = planeModel.scale.z = 2;		
         planeRefs[planes[key].norad] = planeModel;
-        planeRefs[planes[key].norad] = copyVector(planeModel, location);
+        planeRefs[planes[key].norad] = copyVector(planeModel, targetLoc);
         scene.add( planeModel );
       } else {
-        planeRefs[planes[key].norad] = copyVector(planeRefs[planes[key].norad], location);
+        planeRefs[planes[key].norad] = copyVector(planeRefs[planes[key].norad], targetLoc);
       }
     }
   }
+  console.log(scene);
 }
 
 function serverSatHandle(snapshot, scene, satelliteRefs) {
@@ -422,7 +428,9 @@ function serverSatHandle(snapshot, scene, satelliteRefs) {
         // scene.add( satModel );
         var satModel = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial('#EEEEEE'));
         satModel.scale.x = satModel.scale.y = satModel.scale.z = 0.2;	
-        satModel.rotation.x;
+        satModel.rotation.x = Math.random() * 5;
+        satModel.rotation.y = Math.random() * 5;
+        satModel.rotation.z = Math.random() * 5;
         satModel = copyVector(satModel, location);	
         satelliteRefs[satellites[key].norad] = satModel;
         scene.add( satModel );
@@ -467,9 +475,9 @@ function save( blob, filename ) {
 
 function saveArrayBuffer( buffer, filename ) {
 
-  //save( new Blob( [ buffer ], { type: 'application/octet-stream' } ), filename );
-  const fs = require('fs');
-  var path = require('path');
+  save( new Blob( [ buffer ], { type: 'application/octet-stream' } ), filename );
+  //const fs = require('fs');
+  //var path = require('path');
   //fs.appendFile(path.join(__dirname, 'scene.glb'),new Buffer(buffer));
   /*var ie_writeFile = function (filename, buffer) {
     var fso, fileHandle;
