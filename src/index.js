@@ -5,10 +5,6 @@ const earth = new globeScene();
 earth.init();
 earth.animate();
 
-
-var fs = require('fs');
-fs.writeFile('hello.txt', 'TEXT HERE', 'ascii');  
-
 document.getElementById('panel').ondragover = (e) => {
   e.preventDefault();
   document.getElementById('panel').classList.add('dragOver');
