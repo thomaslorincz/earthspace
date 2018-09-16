@@ -5,8 +5,10 @@
   <meta property="og:title" content="GlbLinkshare OG" />
   <meta property="og:type" content="threed.asset" />
   <meta property="og:description" content="Sample GlbLinkshare description." />
-  <meta property="og:asset" content=https://globeweaver.herokuapp.com/model.glb />
+  <meta property="og:asset" content=localhost:8080/scene(5).glb />
+
   <meta name="csrf-param" content="authenticity_token" />
+
   <meta name="csrf-token" content="GlGrluRL1uesQ2ENFCrqgPrnBgroCgHu5J+PgbhsqjDz4hpv96MHkH8Fis2/VG0Q5mKkbCpIgP53Jvjiowd/6A==" />
   <link rel="stylesheet" media="all" href="/assetz/application-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.css" />
   <!-- This script tag should be included after other libraries are loaded, but before your main application code (e.g. app.js): -->
@@ -22,7 +24,6 @@
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <link href="/src/style.css" rel="stylesheet" type="text/css">
   <script src="https://connect.facebook.net/en_US/sdk.js"></script>
-  <script src="js/canvasFill.js"></script>
   <script>
   window.fbAsyncInit = function() {
     FB.init({
@@ -41,6 +42,7 @@
      js.src = "https://connect.facebook.net/en_US/sdk.js";
      fjs.parentNode.insertBefore(js, fjs);
    }(document, 'script', 'facebook-jssdk'));
+
      document.addEventListener('DOMContentLoaded', () => {
        document.querySelector('[data-action="goLive"]').addEventListener('click', (e) => {
          FB.ui({
