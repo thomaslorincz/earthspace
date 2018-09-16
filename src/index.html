@@ -13,12 +13,33 @@
 <body>
 <div id="toolbar">earthspace</div>
 <div id="content">
-  <div id="panel">
+  <div id="panelToolbar">
+    <div id="tabs">
+      <div id="listTab">
+        <i id="listIcon" class="material-icons tabIcon selected">list_alt</i>
+      </div>
+      <div id="layersTab">
+        <i id="layersIcon" class="material-icons tabIcon">layers</i>
+      </div>
+    </div>
     <div id="minControl">
       <i id="minIcon" class="material-icons">chevron_left</i>
     </div>
-    <div id="dataContainer"></div>
   </div>
+  <div id="listPanel" class="panel">
+    <div id="divider1" class="divider"></div>
+    <div id="selection">
+      No selection
+    </div>
+    <div id="divider2" class="divider"></div>
+    <div id="dataContainer">
+      <div id="dragAndDropContainer">
+        <i id="inputIcon" class="material-icons">note_add</i>
+        <div id="dragAndDropText">Drag and drop a CSV file</div>
+      </div>
+    </div>
+  </div>
+  <div id="layersPanel" class="panel hidden"></div>
   <div id="minimizedPanel">
     <i id="maxIcon" class="material-icons">chevron_right</i>
   </div>
