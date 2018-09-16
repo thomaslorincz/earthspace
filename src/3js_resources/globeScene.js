@@ -34,7 +34,7 @@ export default class globeScene {
     this.overlay = null;
     this.textureCache = null;
     this.geo = null;
-    this.satelliteRefs = null;
+    this.satelliteRefs = {};
   }
 
   init() {
@@ -98,14 +98,11 @@ export default class globeScene {
 
       var data = firebase.database().ref('satellites');
       data.on('value', snapshot => {
-        setInterval(() => satelliteHandler(snapshot), 3000);
+        setInterval(() => satelliteHandler(snapshot, this.scene, this.satelliteRefs), 10000);
       });
     });
 
   
-  }
-  test() {
-    console.log("test");
   }
 
   distanceBetween(point1, point2) {
@@ -123,7 +120,7 @@ export default class globeScene {
     const y = ((radius) * Math.cos(phi));
     const z = ((radius) * Math.sin(phi)*Math.sin(theta));
 
-    return [x,y,z];
+    return {x:x,y:y,z:z};
   }
 
   onGlobeClick(event, baseGlobe) {
@@ -140,7 +137,7 @@ export default class globeScene {
 
     // Get new camera position
     var temp = new THREE.Mesh();
-    var returnCoords = this.convertToXYZ(latlng, 900);
+    var returnCoords = this.convertToXYZ(latlng[0], latlng[1], 900);
     temp.position.set(returnCoords.x, returnCoords.y, returnCoords.z);
     temp.lookAt(baseGlobe.position);
     temp.rotateY(Math.PI);
@@ -194,11 +191,11 @@ export default class globeScene {
     }
   }
 
-  convertToXYZ(point, radius) {
+  convertToXYZ(lat, long, radius) {
     radius = radius || 200;
   
-    var latRads = ( 90 - point[0]) * Math.PI / 180;
-    var lngRads = (180 - point[1]) * Math.PI / 180;
+    var latRads = ( 90 - lat) * Math.PI / 180;
+    var lngRads = (180 - long) * Math.PI / 180;
   
     var x = radius * Math.sin(latRads) * Math.cos(lngRads);
     var y = radius * Math.cos(latRads);
@@ -253,7 +250,18 @@ export default class globeScene {
   }
 }
 
-function satelliteHandler(snapshot) { 
+function latLongToCoords(latitude, longitude, radius) {
+  const phi   = (90-latitude)*(Math.PI/180);
+  const theta = (longitude+180)*(Math.PI/180);
+
+  const x = -((radius) * Math.sin(phi)*Math.cos(theta));
+  const y = ((radius) * Math.cos(phi));
+  const z = ((radius) * Math.sin(phi)*Math.sin(theta));
+
+  return {x:x,y:y,z:z};
+}
+
+function satelliteHandler(snapshot, scene, satelliteRefs) { 
   var satellites = snapshot.val();
   for(var key in satellites){
     if(satellites.hasOwnProperty(key)){
@@ -291,6 +299,7 @@ function satelliteHandler(snapshot) {
         //You can get ECF, Geodetic, Look Angles, and Doppler Factor.
         var positionEcf   = satellite.eciToEcf(positionEci, gmst),
             positionGd    = satellite.eciToGeodetic(positionEci, gmst);
+        console.log(positionGd);
         
         // Geodetic coords are accessed via `longitude`, `latitude`, `height`.
         var longitude = positionGd.longitude,
@@ -302,13 +311,47 @@ function satelliteHandler(snapshot) {
           latitudeStr  = satellite.degreesLat(latitude);
             
         var satRec = {latitude : latitudeStr, longitude : longitudeStr, altitude : height};
-        var loader = new THREE.JSONLoader();
-        loader.load('3js_resources/model/ExAlta1_low.json', function(geometry, materials) {
-            var satModel = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial(color: '#000000'));
-        satModel.scale.x = satModel.scale.y = satModel.scale.z = 1;		
+        //var loader = new THREE.JSONLoader();
+        //loader.load('/src/3js_resources/Satellite.json', function(geometry, materials) {
+            //var satModel = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial('#EEEEEE'));
+        //satModel.scale.x = satModel.scale.y = satModel.scale.z = 1;		
         //this.satelliteRefs[satellites[key].norad : satModel];
-        scene.add( satModel );
-        });
+        //scene.add( satModel );
+        //});
+
+        var location = latLongToCoords(satellites[key]['satRec'].latitude, satellites[key]['satRec'].longitude, 500);
+        console.log(latitude, longitude);
+        
+        if (!(satellites[key].norad in satelliteRefs)) {
+          var satModel = new THREE.Mesh(new THREE.CubeGeometry(0.5,0.5,0.5), new THREE.MeshBasicMaterial('#EEEEEE'));
+          satModel.scale.x = satModel.scale.y = satModel.scale.z = 1;		
+          satelliteRefs[satellites[key].norad] = satModel;
+          satelliteRefs[satellites[key].norad] = copyVector(satModel, location);
+          scene.add( satModel );
+        } else {
+          satelliteRefs[satellites[key].norad] = copyVector(satelliteRefs[satellites[key].norad], location);
+        }
     }
   }
+}
+
+
+function convertCoordToXYZ(lat, long, radius) {
+  radius = radius || 200;
+
+  var latRads = ( 90 - lat) * Math.PI / 180;
+  var lngRads = (180 - long) * Math.PI / 180;
+
+  var x = radius * Math.sin(latRads) * Math.cos(lngRads);
+  var y = radius * Math.cos(latRads);
+  var z = radius * Math.sin(latRads) * Math.sin(lngRads);
+  
+  return {x: x, y: y, z: z};
+}
+
+function copyVector(object, vector2) {
+  object.position.x = vector2.x;
+  object.position.y = vector2.y;
+  object.position.z = vector2.z;
+  return object;
 }
